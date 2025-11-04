@@ -131,11 +131,19 @@ export class AppService {
         batches.push(batch)
       }
 
+      // Use API endpoint in production, direct URL in development
+      const getItunesUrl = (ids: string): string => {
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          return `/api/itunes?id=${ids}`
+        }
+        return `https://itunes.apple.com/lookup?id=${ids}`
+      }
+
       const results = await Promise.all(
-        batches.map(batch => 
-          fetch(`https://itunes.apple.com/lookup?id=${batch.join(',')}`)
-            .then(res => res.json())
-        )
+        batches.map(batch => {
+          const url = getItunesUrl(batch.join(','))
+          return fetch(url).then(res => res.json())
+        })
       )
 
       return results.flatMap(result => result.results || [])
