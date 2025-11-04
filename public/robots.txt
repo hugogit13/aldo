@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aldo.vercel.app/sitemap.xml
+
