@@ -757,7 +757,7 @@ function App() {
       )}
 
       <footer>
-        Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
+        {displayedApps.length} {displayedApps.length === 1 ? 'app logo' : 'app logos'} currently shown · Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
       </footer>
     </>
   );
