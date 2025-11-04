@@ -167,6 +167,7 @@ header {
   margin: 0 auto 12px auto;
 }
 
+
 .color-dot {
   width: 40px;
   height: 40px;
@@ -573,10 +574,11 @@ header {
 .selection-preview {
   width: 64px;
   height: 64px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 8px;
   border: none;
   box-shadow: var(--card-shadow);
+  background-color: var(--background-secondary);
 }
 
 .selection-actions {
@@ -1066,12 +1068,14 @@ footer {
     gap: 15px;
     align-items: center;
     justify-content: space-between;
+    padding: 0 20px;
   }
   
   .logo {
     text-align: left;
     font-size: 20px;
     flex: 0 0 auto;
+    align-self: flex-start;
   }
 
   .logo-mobile {
@@ -1087,10 +1091,18 @@ footer {
     order: unset;
     min-width: 0;
     flex: 1;
+    max-width: 100%;
   }
   
   .search-input-container {
     max-width: 100%;
+    width: 100%;
+  }
+  
+  #search-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .header-actions {
@@ -1145,9 +1157,12 @@ footer {
   
   /* Apps container mobile grid */
   .apps-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding: 15px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   
   /* Category sections mobile adjustments */
@@ -1168,12 +1183,41 @@ footer {
   }
   
   .app-card {
-    padding: 15px;
+    padding: 4px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   /* Container mobile adjustments */
   .container {
     padding: 15px;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Color filter mobile adjustments */
+  .color-filter {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    width: 100%;
+    margin: 0 0 12px 0;
+    padding: 8px 20px;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 12px;
+  }
+  
+  .color-filter::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .color-filter .color-dot {
+    flex-shrink: 0;
   }
   
   /* Footer mobile adjustments */
@@ -1266,9 +1310,12 @@ footer {
   }
   
   .apps-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   
   /* Category sections small mobile adjustments */
@@ -1283,13 +1330,15 @@ footer {
   }
   
   .category-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     padding: 0 12px;
     gap: 12px;
   }
   
   .app-card {
-    padding: 12px;
+    padding: 3px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .container {
@@ -1301,14 +1350,17 @@ footer {
   }
 }
 
-/* Ensure the grid always shows 2 columns on mobile regardless of logosPerLine setting */
+/* Ensure the grid always shows 3 columns on mobile regardless of logosPerLine setting */
 @media (max-width: 768px) {
   .apps-container {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .category-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
   }
   
   /* Improve touch interactions on mobile */
@@ -1405,9 +1457,12 @@ footer {
 /* Extra small mobile devices */
 @media (max-width: 360px) {
   .apps-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    padding: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   
   .logo-mobile {
@@ -1420,7 +1475,9 @@ footer {
   }
   
   .app-card {
-    padding: 10px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   /* Ensure minimum spacing on very small screens */
