@@ -225,6 +225,7 @@ const COLORS = [
 function App() {
   const [apps, setApps] = useState<AppWithDetails[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>('all');
+  const [totalAppCount, setTotalAppCount] = useState<number>(0);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -252,6 +253,9 @@ function App() {
     try {
       setIsLoading(true);
       const appsFromDb = await AppService.getAppsByCategory(['all']);
+
+      // Set total count from database (this is the "flex" number)
+      setTotalAppCount(appsFromDb.length);
 
       if (appsFromDb.length === 0) {
         setApps([]);
@@ -757,7 +761,11 @@ function App() {
       )}
 
       <footer>
-        {displayedApps.length} {displayedApps.length === 1 ? 'app logo' : 'app logos'} currently shown · Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
+        {totalAppCount > 0 && (
+          <>
+            {totalAppCount.toLocaleString()} {totalAppCount === 1 ? 'app logo' : 'app logos'} · 
+          </>
+        )} Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
       </footer>
     </>
   );
