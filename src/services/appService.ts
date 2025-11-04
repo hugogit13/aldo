@@ -13,16 +13,36 @@ export interface AppWithDetails extends AppData {
 export class AppService {
   private static readonly SHEET_ID = '1-6D3ft-5hg-SfE_ptLmS1WOni2si73XgY9kSnBf--CM'
   private static readonly GVIZ_URL = `https://docs.google.com/spreadsheets/d/${AppService.SHEET_ID}/gviz/tq?tqx=out:json`
+  
+  // Use API endpoint in production, direct URL in development
+  private static getSheetsUrl(): string {
+    // In production (Vercel), use the API endpoint
+    // In development, can use direct URL or API endpoint
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return '/api/sheets'
+    }
+    // For development, use direct URL (works locally)
+    return AppService.GVIZ_URL
+  }
 
   private static async loadAppsFromSheet(): Promise<AppData[]> {
     try {
-      const response = await fetch(AppService.GVIZ_URL)
-      const text = await response.text()
-
-      // gviz returns JS like: google.visualization.Query.setResponse({...})
-      const jsonStart = text.indexOf('{')
-      const jsonEnd = text.lastIndexOf('}') + 1
-      const payload = JSON.parse(text.slice(jsonStart, jsonEnd))
+      const url = this.getSheetsUrl()
+      const response = await fetch(url)
+      
+      let payload: any
+      
+      if (url === '/api/sheets') {
+        // API endpoint returns JSON directly
+        payload = await response.json()
+      } else {
+        // Direct Google Sheets URL returns text with JSON embedded
+        const text = await response.text()
+        // gviz returns JS like: google.visualization.Query.setResponse({...})
+        const jsonStart = text.indexOf('{')
+        const jsonEnd = text.lastIndexOf('}') + 1
+        payload = JSON.parse(text.slice(jsonStart, jsonEnd))
+      }
 
       const cols: { label: string }[] = payload?.table?.cols || []
       const rows: { c: { v: any }[] }[] = payload?.table?.rows || []
