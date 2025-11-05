@@ -214,19 +214,18 @@ header {
   box-shadow: var(--card-shadow);
 }
 
-/* Desktop: place color switcher fixed at bottom-left, vertical alignment */
+/* Desktop: keep color switcher in flow, centered above content */
 @media (min-width: 769px) {
   .color-filter {
-    position: fixed;
-    left: 16px;
-    bottom: 16px;
-    z-index: 1100;
-    flex-direction: column;
+    position: static;
+    inset: auto;
+    z-index: auto;
+    flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 10px;
-    padding: 16px 16px;
-    margin: 0;
+    padding: 8px 8px;
+    margin: 0 auto 12px auto;
   }
 }
 
