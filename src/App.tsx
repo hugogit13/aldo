@@ -226,6 +226,7 @@ function App() {
   const [apps, setApps] = useState<AppWithDetails[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>('all');
   const [totalAppCount, setTotalAppCount] = useState<number>(0);
+  const [selectedCategory, setSelectedCategory] = useState<'app' | 'game'>('app');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -252,7 +253,7 @@ function App() {
   const loadAppsByCategory = useCallback(async () => {
     try {
       setIsLoading(true);
-      const appsFromDb = await AppService.getAppsByCategory(['all']);
+      const appsFromDb = await AppService.getAppsByCategory([selectedCategory]);
 
       // Set total count from database (this is the "flex" number)
       setTotalAppCount(appsFromDb.length);
@@ -298,7 +299,7 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedCategory]);
 
   useEffect(() => {
     loadAppsByCategory();
@@ -425,8 +426,8 @@ function App() {
         return newHistory;
       });
 
-      // Search apps in Supabase (no category filter)
-      const filteredApps = await AppService.searchAppsByCategory(searchValue, ['all']);
+      // Search apps in current category
+      const filteredApps = await AppService.searchAppsByCategory(searchValue, [selectedCategory]);
       
       // Get app store IDs for iTunes API lookup
       const appStoreIds = filteredApps.map(app => app.app_store_id);
@@ -585,6 +586,34 @@ function App() {
             <div className="logo">
               <span className="logo-desktop">Aldo</span>
               <span className="logo-mobile">Aldo</span>
+            </div>
+            <div className="category-tabs" role="tablist" aria-label="Category">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedCategory === 'app'}
+                className={`category-tab ${selectedCategory === 'app' ? 'active' : ''}`}
+                onClick={() => {
+                  if (selectedCategory !== 'app') {
+                    setSelectedCategory('app');
+                  }
+                }}
+              >
+                Apps
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedCategory === 'game'}
+                className={`category-tab ${selectedCategory === 'game' ? 'active' : ''}`}
+                onClick={() => {
+                  if (selectedCategory !== 'game') {
+                    setSelectedCategory('game');
+                  }
+                }}
+              >
+                Games
+              </button>
             </div>
             <div className="search-section">
               <div className="search-input-container">
