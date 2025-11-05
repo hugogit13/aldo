@@ -896,150 +896,6 @@ header {
   box-shadow: var(--input-shadow-focus);
 }
 
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-}
-
-.modal-buttons button {
-  padding: 12px 24px;
-  border-radius: var(--corner-radius-lg);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--button-shadow);
-  border: none;
-}
-
-.modal-buttons button[type="button"] {
-  background-color: var(--button-secondary);
-  color: var(--text-secondary);
-}
-
-.modal-buttons button[type="button"]:hover {
-  background-color: var(--button-secondary-hover);
-}
-
-.modal-buttons button[type="button"]:active {
-  background-color: var(--button-secondary-active);
-}
-
-.modal-buttons button[type="submit"] {
-  background-color: var(--button-primary);
-  color: var(--button-text);
-}
-
-.modal-buttons button[type="submit"]:hover {
-  background-color: var(--button-primary-hover);
-}
-
-.modal-buttons button[type="submit"]:active {
-  background-color: var(--button-primary-active);
-}
-
-/* Base button styles */
-button {
-  position: relative;
-  border: none;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--button-shadow);
-}
-
-button:hover {
-  box-shadow: var(--button-shadow);
-}
-
-button:active {
-  box-shadow: var(--button-shadow);
-}
-
-/* Primary button styles */
-.request-button,
-.modal-buttons button[type="submit"],
-.show-more-button {
-  background-color: var(--button-primary);
-  color: var(--button-text);
-  border-radius: var(--corner-radius-lg);
-  padding: 12px 24px;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-}
-
-.request-button:hover,
-.modal-buttons button[type="submit"]:hover,
-.show-more-button:hover {
-  background-color: var(--button-primary-hover);
-}
-
-.request-button:active,
-.modal-buttons button[type="submit"]:active,
-.show-more-button:active {
-  background-color: var(--button-primary-active);
-}
-
-/* Secondary button styles */
-.modal-buttons button[type="button"] {
-  background-color: var(--button-secondary);
-  color: var(--text-secondary);
-  border-radius: var(--corner-radius-lg);
-  padding: 12px 24px;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-}
-
-.modal-buttons button[type="button"]:hover {
-  background-color: var(--button-secondary-hover);
-}
-
-.modal-buttons button[type="button"]:active {
-  background-color: var(--button-secondary-active);
-}
-
-/* Buy coffee button styles */
-.buy-coffee-btn {
-  display: none;
-}
-
-/* Show more button styles */
-.show-more-button {
-  background-color: var(--button-primary);
-  color: var(--button-text);
-  border: none;
-  padding: 12px 24px;
-  border-radius: var(--corner-radius-lg);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--button-shadow);
-}
-
-.show-more-button:hover {
-  background-color: var(--button-primary-hover);
-}
-
-.show-more-button:active {
-  background-color: var(--button-primary-active);
-}
-
-/* Remove old button styles */
-.about-link {
-  display: none;
-}
-
 /* Footer styles */
 footer {
   padding: 2rem 64px;
@@ -1050,20 +906,6 @@ footer {
   border-top: none;
   box-shadow: var(--section-shadow);
   margin-top: auto;
-}
-
-.back-to-top.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.back-to-top:hover {
-  background-color: var(--background-secondary);
-}
-
-.back-to-top:active {
-  background-color: var(--background-tertiary);
 }
 
 /* Loading spinner styles */
@@ -1196,8 +1038,6 @@ footer {
     gap: 12px;
     flex: 1;
   }
-  
-
   
   /* Apps container mobile grid */
   .apps-container {
