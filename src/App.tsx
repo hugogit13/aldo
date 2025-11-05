@@ -240,7 +240,6 @@ function App() {
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
-  const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
 
   const handleImageLoad = useCallback((id: string) => {
     setImageLoaded(prev => ({ ...prev, [id]: true }));
@@ -672,49 +671,19 @@ function App() {
       </div>
 
       <div className="container">
-        {/* Color filter control above logos, left-aligned */}
-        <div className="color-filter-control" style={{ position: 'relative', margin: '0 16px 8px 16px' }}>
-          <button
-            type="button"
-            className="category-select selected-category color-filter-trigger"
-            aria-haspopup="listbox"
-            aria-expanded={isColorMenuOpen}
-            onClick={() => setIsColorMenuOpen((o) => !o)}
-            title="Filter by color"
-          >
-            <span
-              className="color-preview"
-              style={selectedColor === 'all'
-                ? ({
-                    background: 'transparent',
-                    border: '1px solid var(--border-subtle)'
-                  } as React.CSSProperties)
-                : ({ backgroundColor: COLORS.find(c => c.id === selectedColor)?.value } as React.CSSProperties)}
+        {/* Color filter bar */}
+        <div className="color-filter">
+          {COLORS.map((c) => (
+            <button
+              key={c.id}
+              className={`color-dot ${c.id === 'all' ? 'all' : ''} ${selectedColor === c.id ? 'selected' : ''}`}
+              title={c.name}
+              aria-label={c.name}
+              aria-pressed={selectedColor === c.id}
+              onClick={() => setSelectedColor(c.id)}
+              style={c.id !== 'all' ? ({ backgroundColor: c.value } as React.CSSProperties) : undefined}
             />
-            <span>{selectedColor === 'all' ? 'Colors' : (COLORS.find(c => c.id === selectedColor)?.name || 'Colors')}</span>
-            <svg className={`chevron ${isColorMenuOpen ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <div className={`category-dropdown ${isColorMenuOpen ? 'open' : ''}`} role="listbox">
-            {COLORS.map((c) => (
-              <div
-                key={c.id}
-                className="category-option"
-                role="option"
-                aria-selected={selectedColor === c.id}
-                onClick={() => { setSelectedColor(c.id); setIsColorMenuOpen(false); }}
-              >
-                <span
-                  className="color-preview"
-                  style={c.id === 'all'
-                    ? ({ background: 'linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #00ff00, #0000ff, #800080, #ffc0cb, #000000, #ffffff)' } as React.CSSProperties)
-                    : ({ backgroundColor: c.value } as React.CSSProperties)}
-                />
-                <span>{c.name}</span>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
         {isLoading ? (
           <div className="loading-container">
