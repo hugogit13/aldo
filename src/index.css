@@ -54,6 +54,35 @@ header {
   gap: 8px;
   margin-left: 8px;
 }
+.color-filter-control {
+  display: inline-block;
+}
+
+.color-filter-control .category-dropdown {
+  right: auto;
+}
+
+/* Trigger appearance for category/color selects */
+.category-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.category-select .chevron {
+  margin-left: 4px;
+  transition: transform 0.15s ease;
+}
+
+.category-select .chevron.open {
+  transform: rotate(180deg);
+}
 
 .category-tab {
   font-family: 'Inter', sans-serif;
@@ -195,7 +224,7 @@ header {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 8px 8px;
+  padding: 8px 16px;
   width: -moz-fit-content;
   width: fit-content;
   margin: 0 auto 12px auto;
@@ -266,10 +295,9 @@ header {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
   background-color: var(--background-primary);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--corner-radius-md);
+  border-radius: 4px;
   margin-top: 4px;
   max-height: 320px;
   overflow-y: auto;
@@ -277,7 +305,8 @@ header {
   z-index: 1000;
   display: none;
   box-shadow: var(--dropdown-shadow);
-  min-width: 100%;
+  min-width: 240px;
+  max-width: 320px;
   opacity: 0;
   transform: translateY(-8px);
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -705,22 +734,9 @@ header {
   border: none;
 }
 
-/* Tooltip styles */
+/* Disable tooltip on hover for category select */
 .category-select[title]:hover::before {
-  content: attr(title);
-  position: absolute;
-  background-color: var(--background-secondary);
-  color: var(--text-secondary);
-  padding: 8px 12px;
-  border-radius: var(--corner-radius-sm);
-  font-size: 14px;
-  white-space: nowrap;
-  z-index: 1000;
-  top: 100%;
-  left: 0;
-  margin-top: 8px;
-  box-shadow: var(--dropdown-shadow);
-  border: none;
+  content: none;
 }
 
 :root {
