@@ -426,8 +426,8 @@ function App() {
         return newHistory;
       });
 
-      // Search apps in current category
-      const filteredApps = await AppService.searchAppsByCategory(searchValue, [selectedCategory]);
+      // Search apps across all categories for better user experience
+      const filteredApps = await AppService.searchAppsByCategory(searchValue, ['app', 'game']);
       
       // Get app store IDs for iTunes API lookup
       const appStoreIds = filteredApps.map(app => app.app_store_id);
