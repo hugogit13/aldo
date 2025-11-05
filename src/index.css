@@ -60,21 +60,22 @@ header {
   font-size: 14px;
   padding: 8px 12px;
   border-radius: var(--corner-radius-md);
-  background-color: var(--background-secondary);
-  color: var(--text-primary);
-  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .category-tab:hover {
-  background-color: var(--background-tertiary);
+  color: var(--text-primary);
 }
 
 .category-tab.active {
-  background-color: var(--background-primary);
-  border-color: var(--button-primary);
-  box-shadow: 0 0 0 3px rgba(242, 168, 29, 0.10);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-primary);
 }
 
 .logo {
