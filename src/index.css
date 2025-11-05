@@ -59,10 +59,11 @@ header {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   padding: 8px 12px;
-  border-radius: var(--corner-radius-md);
+  border-radius: 0;
   background: transparent;
   color: var(--text-muted);
   border: none;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.15s ease;
 }
