@@ -47,6 +47,36 @@ header {
   padding: 0 56px;
 }
 
+/* Category tabs next to logo */
+.category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.category-tab {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: var(--corner-radius-md);
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.category-tab:hover {
+  background-color: var(--background-tertiary);
+}
+
+.category-tab.active {
+  background-color: var(--background-primary);
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 3px rgba(242, 168, 29, 0.10);
+}
+
 .logo {
   font-family: 'Figtree', sans-serif;
   font-size: 24px;
@@ -1092,6 +1122,16 @@ footer {
     min-width: 0;
     flex: 1;
     max-width: 100%;
+  }
+
+  .category-tabs {
+    margin-left: 0;
+    gap: 6px;
+  }
+
+  .category-tab {
+    padding: 6px 10px;
+    font-size: 13px;
   }
   
   .search-input-container {
