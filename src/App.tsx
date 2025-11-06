@@ -649,7 +649,7 @@ function App() {
                 <input
                   type="text"
                   id="search-input"
-                  placeholder="Search app database..."
+                  placeholder="Search a logo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -685,87 +685,96 @@ function App() {
             />
           ))}
         </div>
-        {isLoading ? (
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>Loading apps...</p>
-          </div>
-        ) : (
-          <>
-            {displayedApps.length === 0 ? (
-              <p>No apps found.</p>
-            ) : (
-              <div className="apps-container">
-                {displayedApps.map(app => (
-                  <div key={app.trackId} className={`app-card ${selectedIds.includes(app.trackId.toString()) ? 'is-selected' : ''}`} tabIndex={0}>
-                    <div 
-                      className="app-link"
-                      style={{ '--app-color': app.dominantColor } as React.CSSProperties}
-                    >
-                      <div className="app-logo-container" title={app.trackName}>
-                        {(() => {
-                          const largeRaw = app.artworkUrl100.replace('100x100', '512x512');
-                          const smallRaw = app.artworkUrl100; // 100x100
-                          const large = `${largeRaw}${largeRaw.includes('?') ? '&' : '?'}cors=1`;
-                          const small = `${smallRaw}${smallRaw.includes('?') ? '&' : '?'}cors=1`;
-                          const id = app.trackId.toString();
-                          const isLoaded = !!imageLoaded[id];
-                          return (
-                            <>
-                              {!isLoaded && <div className="logo-skeleton" aria-hidden="true"></div>}
-                              <img
-                                src={small}
-                                srcSet={`${small} 100w, ${large} 512w`}
-                                sizes="(max-width: 768px) 50vw, 12vw"
-                                alt={app.trackName}
-                                className={`app-logo ${isLoaded ? 'is-visible' : 'is-hidden'}`}
-                                loading="lazy"
-                                decoding="async"
-                                crossOrigin="anonymous"
-                                width={512}
-                                height={512}
-                                onLoad={() => handleImageLoad(id)}
-                                onError={() => handleImageError(id)}
-                                ref={(el) => {
-                                  if (el) imgRefs.current.set(id, el);
-                                  else imgRefs.current.delete(id);
-                                }}
-                              />
-                            </>
-                          );
-                        })()}
-                        <button
-                          type="button"
-                          className={`select-checkbox ${selectedIds.includes(app.trackId.toString()) ? 'checked' : ''}`}
-                          onClick={(e) => { e.stopPropagation(); toggleSelect(app.trackId.toString()); }}
-                          aria-label={selectedIds.includes(app.trackId.toString()) ? 'Deselect' : 'Select'}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </button>
-                        <button
-                          className="copy-button"
-                          onClick={() => handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'));
-                            }
-                          }}
-                          aria-label="Copy logo"
-                          aria-live="polite"
-                        >
-                          {copyStatus[app.trackId.toString()] || 'Copy'}
-                        </button>
-                      </div>
+        <>
+          {isLoading && displayedApps.length === 0 ? (
+            <div className="apps-container">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={i} className="app-card">
+                  <div className="app-link">
+                    <div className="app-logo-container">
+                      <div className="logo-skeleton" aria-hidden="true"></div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {displayedApps.length === 0 ? (
+                <p>No apps found.</p>
+              ) : (
+                <div className="apps-container">
+                  {displayedApps.map(app => (
+                    <div key={app.trackId} className={`app-card ${selectedIds.includes(app.trackId.toString()) ? 'is-selected' : ''}`} tabIndex={0}>
+                      <div 
+                        className="app-link"
+                        style={{ '--app-color': app.dominantColor } as React.CSSProperties}
+                      >
+                        <div className="app-logo-container" title={app.trackName}>
+                          {(() => {
+                            const largeRaw = app.artworkUrl100.replace('100x100', '512x512');
+                            const smallRaw = app.artworkUrl100; // 100x100
+                            const large = `${largeRaw}${largeRaw.includes('?') ? '&' : '?'}cors=1`;
+                            const small = `${smallRaw}${smallRaw.includes('?') ? '&' : '?'}cors=1`;
+                            const id = app.trackId.toString();
+                            const isLoaded = !!imageLoaded[id];
+                            return (
+                              <>
+                                {!isLoaded && <div className="logo-skeleton" aria-hidden="true"></div>}
+                                <img
+                                  src={small}
+                                  srcSet={`${small} 100w, ${large} 512w`}
+                                  sizes="(max-width: 768px) 50vw, 12vw"
+                                  alt={app.trackName}
+                                  className={`app-logo ${isLoaded ? 'is-visible' : 'is-hidden'}`}
+                                  loading="lazy"
+                                  decoding="async"
+                                  crossOrigin="anonymous"
+                                  width={512}
+                                  height={512}
+                                  onLoad={() => handleImageLoad(id)}
+                                  onError={() => handleImageError(id)}
+                                  ref={(el) => {
+                                    if (el) imgRefs.current.set(id, el);
+                                    else imgRefs.current.delete(id);
+                                  }}
+                                />
+                              </>
+                            );
+                          })()}
+                          <button
+                            type="button"
+                            className={`select-checkbox ${selectedIds.includes(app.trackId.toString()) ? 'checked' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(app.trackId.toString()); }}
+                            aria-label={selectedIds.includes(app.trackId.toString()) ? 'Deselect' : 'Select'}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </button>
+                          <button
+                            className="copy-button"
+                            onClick={() => handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'));
+                              }
+                            }}
+                            aria-label="Copy logo"
+                            aria-live="polite"
+                          >
+                            {copyStatus[app.trackId.toString()] || 'Copy'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
       </div>
 
       {selectedIds.length > 0 && (
