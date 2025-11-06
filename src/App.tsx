@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import './index.css';
 // Lazy-load non-critical dropdown
 const SearchHistoryDropdown = lazy(() => import('./components/SearchHistoryDropdown').then(m => ({ default: m.SearchHistoryDropdown })));
+const ColorFilterDropdown = lazy(() => import('./components/ColorFilterDropdown').then(m => ({ default: m.ColorFilterDropdown })));
 import { AppService, AppWithDetails } from './services/appService';
 
 // Utility function to copy image as PNG
@@ -211,7 +212,7 @@ const generateCombinedCanvas = async (
 
 // Color categories for filtering
 const COLORS = [
-  { id: 'all', name: 'All Colors', value: 'all' },
+  { id: 'all', name: 'Multicolor', value: 'all' },
   { id: 'red', name: 'Red', value: '#ff0000' },
   { id: 'orange', name: 'Orange', value: '#ffa500' },
   { id: 'yellow', name: 'Yellow', value: '#ffff00' },
@@ -233,7 +234,8 @@ function App() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isColorFilterOpen, setIsColorFilterOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState<{ [key: string]: string }>({});
   const imgRefs = useRef<Map<string, HTMLImageElement>>(new Map());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -735,22 +737,20 @@ function App() {
       </div>
 
       <div className="container">
-        {/* Color filter bar */}
-        <div className="color-filter">
-          {COLORS.map((c) => (
-            <button
-              key={c.id}
-              className={`color-dot ${c.id === 'all' ? 'all' : ''} ${selectedColor === c.id ? 'selected' : ''}`}
-              title={c.name}
-              aria-label={c.name}
-              aria-pressed={selectedColor === c.id}
-              onClick={() => setSelectedColor(c.id)}
-              style={c.id !== 'all' ? ({ backgroundColor: c.value } as React.CSSProperties) : undefined}
+        {/* Color filter dropdown */}
+        <div className="color-filter-wrapper">
+          <Suspense fallback={null}>
+            <ColorFilterDropdown
+              colors={COLORS}
+              selectedColor={selectedColor}
+              onSelect={(colorId) => setSelectedColor(colorId)}
+              isOpen={isColorFilterOpen}
+              setIsOpen={setIsColorFilterOpen}
             />
-          ))}
+          </Suspense>
         </div>
         <>
-          {isLoading && displayedApps.length === 0 ? (
+          {(isLoading || (apps.length === 0 && !hasSearched)) && displayedApps.length === 0 ? (
             <div className="apps-container">
               {Array.from({ length: 30 }).map((_, i) => (
                 <div key={i} className="app-card">
@@ -866,7 +866,7 @@ function App() {
       <footer>
         {totalLogoCount > 0 && (
           <>
-            {totalLogoCount.toLocaleString()} {totalLogoCount === 1 ? 'game and logo' : 'games and logos'} · 
+            {totalLogoCount.toLocaleString()} {totalLogoCount === 1 ? 'game and app logo' : 'games and app logos'} · 
           </>
         )} Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
       </footer>
