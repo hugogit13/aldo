@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import './index.css';
-import { SearchHistoryDropdown } from './components/SearchHistoryDropdown';
+// Lazy-load non-critical dropdown
+const SearchHistoryDropdown = lazy(() => import('./components/SearchHistoryDropdown').then(m => ({ default: m.SearchHistoryDropdown })));
 import { AppService, AppWithDetails } from './services/appService';
 
 // Utility function to copy image as PNG
@@ -240,6 +241,7 @@ function App() {
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
+  const [colorsById, setColorsById] = useState<{ [key: string]: string }>({});
 
   const handleImageLoad = useCallback((id: string) => {
     setImageLoaded(prev => ({ ...prev, [id]: true }));
@@ -280,20 +282,8 @@ function App() {
         })
         .sort((a, b) => a.trackName.localeCompare(b.trackName));
 
-      // Extract dominant colors for each app
-      const appsWithColors = await Promise.all(
-        allApps.map(async (app) => {
-          try {
-            const color = await AppService.getDominantColor(app.artworkUrl100);
-            return { ...app, dominantColor: color };
-          } catch (error) {
-            console.error('Error getting dominant color for', app.trackName, error);
-            return { ...app, dominantColor: '#666666' }; // Fallback color
-          }
-        })
-      );
-
-      setApps(appsWithColors);
+      // Set apps immediately; defer color extraction until needed
+      setApps(allApps);
     } catch (error) {
       console.error('Error loading apps by category:', error);
     } finally {
@@ -358,7 +348,8 @@ function App() {
   const filteredApps: AppWithDetails[] = apps
     .filter(app => {
       if (selectedColor === 'all') return true;
-      const closest = getClosestColorId(app.dominantColor || '#666666');
+      const color = colorsById[app.trackId.toString()] || app.dominantColor || '#666666';
+      const closest = getClosestColorId(color);
       return closest === selectedColor;
     })
     .sort((a, b) => a.trackName.localeCompare(b.trackName));
@@ -367,6 +358,78 @@ function App() {
 
   // Flat list rendering; categories removed
 
+  // Compute dominant colors on demand (only when a color filter is active)
+  const computeDominantColorFromElement = useCallback(async (imgEl: HTMLImageElement): Promise<string> => {
+    if (!imgEl.complete || imgEl.naturalWidth === 0) {
+      await new Promise<void>((resolve, reject) => {
+        imgEl.onload = () => resolve();
+        imgEl.onerror = () => reject();
+      });
+    }
+    const sampleSize = 24;
+    const canvas = document.createElement('canvas');
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '#666666';
+    try {
+      ctx.drawImage(imgEl, 0, 0, sampleSize, sampleSize);
+      const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize);
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        n++;
+      }
+      r = Math.round(r / n);
+      g = Math.round(g / n);
+      b = Math.round(b / n);
+      const toHex = (x: number) => x.toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    } catch {
+      // Fallback if canvas is tainted
+      return '#666666';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedColor === 'all' || apps.length === 0) return;
+    const missing = apps.filter(a => !colorsById[a.trackId.toString()]).slice(0, 80);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    const run = async () => {
+      const updates: { [k: string]: string } = {};
+      for (const app of missing) {
+        const id = app.trackId.toString();
+        const el = imgRefs.current.get(id);
+        if (el) {
+          const color = await computeDominantColorFromElement(el).catch(() => '#666666');
+          if (cancelled) return;
+          updates[id] = color;
+        } else {
+          // As a fallback, compute using the 100x100 URL without blocking others
+          try {
+            const color = await AppService.getDominantColor(app.artworkUrl100);
+            if (cancelled) return;
+            updates[id] = color;
+          } catch {
+            // ignore
+          }
+        }
+      }
+      if (!cancelled && Object.keys(updates).length) {
+        setColorsById(prev => ({ ...prev, ...updates }));
+      }
+    };
+    // Defer to idle time to avoid competing with initial rendering
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      setTimeout(run, 0);
+    }
+    return () => { cancelled = true; };
+  }, [selectedColor, apps, colorsById, computeDominantColorFromElement]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -446,20 +509,7 @@ function App() {
         })
         .sort((a, b) => a.trackName.localeCompare(b.trackName));
 
-      // Extract dominant colors for each app
-      const appsWithColors = await Promise.all(
-        allApps.map(async (app) => {
-          try {
-            const color = await AppService.getDominantColor(app.artworkUrl100);
-            return { ...app, dominantColor: color };
-          } catch (error) {
-            console.error('Error getting dominant color for', app.trackName, error);
-            return { ...app, dominantColor: '#666666' }; // Fallback color
-          }
-        })
-      );
-
-      setApps(appsWithColors);
+      setApps(allApps);
       setHasSearched(true);
       if (term) {
         setSearchTerm(term);
@@ -655,15 +705,17 @@ function App() {
                   onKeyPress={handleKeyPress}
                   onFocus={() => setIsSearchHistoryOpen(true)}
                 />
-                <SearchHistoryDropdown
-                  history={searchHistory}
-                  onSelect={(term) => {
-                    searchApps(term);
-                    setIsSearchHistoryOpen(false);
-                  }}
-                  isOpen={isSearchHistoryOpen}
-                  setIsOpen={setIsSearchHistoryOpen}
-                />
+                <Suspense fallback={null}>
+                  <SearchHistoryDropdown
+                    history={searchHistory}
+                    onSelect={(term) => {
+                      searchApps(term);
+                      setIsSearchHistoryOpen(false);
+                    }}
+                    isOpen={isSearchHistoryOpen}
+                    setIsOpen={setIsSearchHistoryOpen}
+                  />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -708,7 +760,7 @@ function App() {
                     <div key={app.trackId} className={`app-card ${selectedIds.includes(app.trackId.toString()) ? 'is-selected' : ''}`} tabIndex={0}>
                       <div 
                         className="app-link"
-                        style={{ '--app-color': app.dominantColor } as React.CSSProperties}
+                        style={{ '--app-color': (colorsById[app.trackId.toString()] || app.dominantColor || '#666666') } as React.CSSProperties}
                       >
                         <div className="app-logo-container" title={app.trackName}>
                           {(() => {
@@ -729,6 +781,7 @@ function App() {
                                   className={`app-logo ${isLoaded ? 'is-visible' : 'is-hidden'}`}
                                   loading="lazy"
                                   decoding="async"
+                                  fetchPriority="low"
                                   crossOrigin="anonymous"
                                   width={512}
                                   height={512}
