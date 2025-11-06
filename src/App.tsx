@@ -226,7 +226,7 @@ const COLORS = [
 function App() {
   const [apps, setApps] = useState<AppWithDetails[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>('all');
-  const [totalAppCount, setTotalAppCount] = useState<number>(0);
+  const [totalLogoCount, setTotalLogoCount] = useState<number>(0);
   const [selectedCategory, setSelectedCategory] = useState<'app' | 'game'>('app');
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -252,13 +252,20 @@ function App() {
     setImageLoaded(prev => ({ ...prev, [id]: true }));
   }, []);
 
+  // Load total count of all logos from the sheet
+  const loadTotalLogoCount = useCallback(async () => {
+    try {
+      const allApps = await AppService.getAllApps();
+      setTotalLogoCount(allApps.length);
+    } catch (error) {
+      console.error('Error loading total logo count:', error);
+    }
+  }, []);
+
   const loadAppsByCategory = useCallback(async () => {
     try {
       setIsLoading(true);
       const appsFromDb = await AppService.getAppsByCategory([selectedCategory]);
-
-      // Set total count from database (this is the "flex" number)
-      setTotalAppCount(appsFromDb.length);
 
       if (appsFromDb.length === 0) {
         setApps([]);
@@ -290,6 +297,11 @@ function App() {
       setIsLoading(false);
     }
   }, [selectedCategory]);
+
+  // Load total logo count on mount
+  useEffect(() => {
+    loadTotalLogoCount();
+  }, [loadTotalLogoCount]);
 
   useEffect(() => {
     loadAppsByCategory();
@@ -852,9 +864,9 @@ function App() {
       )}
 
       <footer>
-        {totalAppCount > 0 && (
+        {totalLogoCount > 0 && (
           <>
-            {totalAppCount.toLocaleString()} {totalAppCount === 1 ? 'app logo' : 'app logos'} · 
+            {totalLogoCount.toLocaleString()} {totalLogoCount === 1 ? 'game and logo' : 'games and logos'} · 
           </>
         )} Built using Cursor by <a href="https://hugodesigner.framer.website/" target="_blank" rel="noopener noreferrer">Hugo Kestali</a>
       </footer>
