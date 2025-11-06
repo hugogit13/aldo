@@ -189,7 +189,139 @@ header {
   flex: 1 0 auto;
 }
 
-/* Color filter bar */
+/* Color filter dropdown */
+.color-filter-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-left: 24px;
+  position: relative;
+  width: 100%;
+}
+
+.color-filter-container {
+  position: relative;
+  display: inline-block;
+}
+
+.color-filter-button {
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--corner-radius-md);
+  font-size: 14px;
+  font-weight: 400;
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.color-filter-button:hover {
+  background-color: var(--background-tertiary);
+}
+
+.color-filter-button:focus {
+  outline: none;
+  background-color: var(--background-primary);
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 3px rgba(242, 168, 29, 0.1);
+}
+
+.color-filter-button-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.color-filter-swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.color-filter-swatch.multicolor {
+  background: conic-gradient(
+    #ff0000 0deg 30deg,
+    #ffa500 30deg 60deg,
+    #ffff00 60deg 90deg,
+    #00ff00 90deg 120deg,
+    #0000ff 120deg 180deg,
+    #800080 180deg 210deg,
+    #ffc0cb 210deg 240deg,
+    #a52a2a 240deg 270deg,
+    #000000 270deg 315deg,
+    #ffffff 315deg 360deg
+  );
+}
+
+.color-filter-label {
+  flex: 1;
+  text-align: left;
+}
+
+.color-filter-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.color-filter-chevron.open {
+  transform: rotate(180deg);
+}
+
+.color-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  width: max-content;
+}
+
+.color-filter-option-swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.color-filter-option-swatch.multicolor {
+  background: conic-gradient(
+    #ff0000 0deg 30deg,
+    #ffa500 30deg 60deg,
+    #ffff00 60deg 90deg,
+    #00ff00 90deg 120deg,
+    #0000ff 120deg 180deg,
+    #800080 180deg 210deg,
+    #ffc0cb 210deg 240deg,
+    #a52a2a 240deg 270deg,
+    #000000 270deg 315deg,
+    #ffffff 315deg 360deg
+  );
+}
+
+/* Selected state for color filter options */
+.color-filter-dropdown .category-option.selected {
+  background-color: var(--background-secondary);
+}
+
+.color-filter-dropdown .category-option.selected:hover {
+  background-color: var(--background-tertiary);
+}
+
+/* Legacy color filter styles (kept for backwards compatibility if needed) */
 .color-filter {
   display: flex;
   align-items: center;
@@ -200,7 +332,6 @@ header {
   width: fit-content;
   margin: 0 auto 12px auto;
 }
-
 
 .color-dot {
   width: 40px;
@@ -214,21 +345,6 @@ header {
   box-shadow: var(--card-shadow);
 }
 
-/* Desktop: keep color switcher in flow, centered above content */
-@media (min-width: 769px) {
-  .color-filter {
-    position: static;
-    inset: auto;
-    z-index: auto;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 8px 8px;
-    margin: 0 auto 12px auto;
-  }
-}
-
 .color-dot:hover {
   transform: translateY(-1px);
   border-color: var(--button-primary);
@@ -240,7 +356,6 @@ header {
   transform: translateY(-1px) scale(1.05);
 }
 
-/* Multi-color representation for 'all' */
 .color-dot.all {
   background: conic-gradient(
     #ff0000 0deg 30deg,
@@ -1058,6 +1173,31 @@ footer {
   }
   
   /* Color filter mobile adjustments */
+  .color-filter-wrapper {
+    justify-content: flex-start;
+    align-items: flex-start;
+    margin: 0 0 12px 0;
+    padding-left: 20px;
+    padding-right: 20px;
+    width: 100%;
+  }
+
+  .color-filter-container {
+    width: 100%;
+  }
+
+  .color-filter-button {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .color-filter-dropdown {
+    left: 0;
+    right: 0;
+    min-width: 100%;
+    width: 100%;
+  }
+  
   .color-filter {
     justify-content: flex-start;
     overflow-x: auto;
