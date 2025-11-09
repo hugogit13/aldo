@@ -212,7 +212,7 @@ const generateCombinedCanvas = async (
 
 // Color categories for filtering
 const COLORS = [
-  { id: 'all', name: 'Multicolor', value: 'all' },
+  { id: 'all', name: 'Color', value: 'all' },
   { id: 'red', name: 'Red', value: '#ff0000' },
   { id: 'orange', name: 'Orange', value: '#ffa500' },
   { id: 'yellow', name: 'Yellow', value: '#ffff00' },
@@ -750,7 +750,7 @@ function App() {
           </Suspense>
         </div>
         <>
-          {(isLoading || (apps.length === 0 && !hasSearched)) && displayedApps.length === 0 ? (
+          {isLoading || (apps.length === 0 && !hasSearched) ? (
             <div className="apps-container">
               {Array.from({ length: 30 }).map((_, i) => (
                 <div key={i} className="app-card">
