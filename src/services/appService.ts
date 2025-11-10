@@ -1,5 +1,24 @@
 import type { AppData } from '../lib/types'
 
+interface GvizCell {
+  v: unknown
+}
+
+interface GvizRow {
+  c: (GvizCell | null)[]
+}
+
+interface GvizColumn {
+  label: string | null
+}
+
+interface GvizResponse {
+  table?: {
+    cols?: (GvizColumn | null)[]
+    rows?: (GvizRow | null)[]
+  }
+}
+
 export interface AppWithDetails extends AppData {
   trackId: number
   trackName: string
@@ -33,7 +52,7 @@ export class AppService {
       const url = this.getSheetsUrl()
       const response = await fetch(url)
       
-      let payload: any
+      let payload: GvizResponse
       
       if (url === '/api/sheets') {
         // API endpoint returns JSON directly
@@ -47,31 +66,32 @@ export class AppService {
         payload = JSON.parse(text.slice(jsonStart, jsonEnd))
       }
 
-      const cols: { label: string }[] = payload?.table?.cols || []
-      const rows: { c: { v: any }[] }[] = payload?.table?.rows || []
+      const cols = (payload?.table?.cols ?? []).filter((col): col is GvizColumn => Boolean(col))
+      const rows = (payload?.table?.rows ?? []).filter((row): row is GvizRow => Boolean(row))
 
       // Build a label -> index map for robust extraction
       const labelToIndex: Record<string, number> = {}
-      cols.forEach((col: { label: string }, idx: number) => {
-        if (col && typeof col.label === 'string') {
+      cols.forEach((col, idx) => {
+        if (typeof col.label === 'string') {
           labelToIndex[col.label.trim().toLowerCase()] = idx
         }
       })
 
-      const getVal = (r: { c: { v: any }[] }, label: string) => {
+      const getVal = (row: GvizRow, label: string) => {
         const idx = labelToIndex[label]
-        const cell = idx != null ? r.c[idx] : undefined
+        if (idx == null) return null
+        const cell = row.c[idx]
         return cell && cell.v != null ? cell.v : null
       }
 
       const apps: AppData[] = rows
-        .map((r) => {
-          const idRaw = getVal(r, 'id')
-          const name = getVal(r, 'name') || ''
-          const appStoreIdRaw = getVal(r, 'app_store_id')
-          const category = getVal(r, 'category') || undefined
-          const createdAt = getVal(r, 'created_at') || undefined
-          const updatedAt = getVal(r, 'updated_at') || undefined
+        .map((row) => {
+          const idRaw = getVal(row, 'id')
+          const name = (getVal(row, 'name') as string | null) ?? ''
+          const appStoreIdRaw = getVal(row, 'app_store_id')
+          const category = (getVal(row, 'category') as string | null) ?? undefined
+          const createdAt = (getVal(row, 'created_at') as string | null) ?? undefined
+          const updatedAt = (getVal(row, 'updated_at') as string | null) ?? undefined
 
           const id = typeof idRaw === 'number' ? idRaw : parseInt(String(idRaw || '0'), 10)
           const app_store_id = appStoreIdRaw != null ? String(appStoreIdRaw) : ''
