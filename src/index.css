@@ -1027,10 +1027,11 @@ header {
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.2);
   padding: 28px;
   width: min(960px, 92vw);
-  max-height: calc(100vh - 120px);
+  max-height: min(90vh, 920px);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  overflow: hidden;
 }
 
 .screenshot-modal-header {
@@ -1048,15 +1049,10 @@ header {
   margin-bottom: 4px;
 }
 
-.screenshot-modal-title p {
+.screenshot-modal-subtitle {
   color: var(--text-secondary);
   font-size: 14px;
-}
-
-.screenshot-modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: block;
 }
 
 .screenshot-modal-copy {
@@ -1119,20 +1115,28 @@ header {
 }
 
 .screenshot-modal-body {
-  overflow: visible;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .screenshot-scroll-container {
   position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .screenshot-strip {
   display: flex;
   gap: 18px;
   overflow-x: auto;
-  padding: 0 52px 16px;
+  overflow-y: hidden;
+  padding: 0 64px 24px;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
+  height: min(62vh, 720px);
+  scrollbar-gutter: stable both-edges;
 }
 
 .screenshot-strip::-webkit-scrollbar {
@@ -1146,20 +1150,22 @@ header {
 
 .screenshot-item {
   flex: 0 0 auto;
-  width: clamp(180px, 22vw, 320px);
+  height: 100%;
   border-radius: var(--corner-radius-lg);
   overflow: hidden;
   background: var(--background-secondary);
   box-shadow: var(--card-shadow);
   scroll-snap-align: start;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .screenshot-item img {
-  width: 100%;
   height: 100%;
+  width: auto;
   display: block;
-  object-fit: cover;
 }
 
 .screenshot-nav {
@@ -1203,6 +1209,16 @@ header {
   color: var(--text-secondary);
   text-align: center;
   padding: 24px 0;
+}
+
+.screenshot-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
 }
 
 /* Footer styles */
@@ -1446,23 +1462,21 @@ footer {
 
   .screenshot-modal-overlay {
     padding: 16px;
+    align-items: flex-start;
   }
 
   .screenshot-modal {
     width: 100%;
-    padding: 20px;
-    max-height: calc(100vh - 80px);
+    padding: 20px 20px 28px;
+    max-height: 100dvh;
+    height: 100%;
+    border-radius: 24px;
   }
 
   .screenshot-modal-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .screenshot-modal-actions {
-    width: 100%;
-    justify-content: space-between;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
   }
 
   .screenshot-modal-close {
@@ -1473,10 +1487,39 @@ footer {
 
   .screenshot-strip {
     gap: 12px;
+    height: min(70vh, 520px);
+    padding: 0 48px 36px;
   }
 
-  .screenshot-item {
-    width: clamp(160px, 60vw, 260px);
+  .screenshot-nav {
+    width: 40px;
+    height: 40px;
+  }
+
+  .screenshot-nav--left {
+    left: 10px;
+  }
+
+  .screenshot-nav--right {
+    right: 10px;
+  }
+
+  .screenshot-modal-footer {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -20px -28px;
+    padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92) 60%, rgba(255, 255, 255, 0));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .screenshot-modal-footer .screenshot-modal-link,
+  .screenshot-modal-footer .screenshot-modal-copy {
+    width: 100%;
+    text-align: center;
   }
   
   /* Extend dropdown width on mobile */
