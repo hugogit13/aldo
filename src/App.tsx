@@ -1,66 +1,14 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import './index.css';
 // Lazy-load non-critical dropdown
 const SearchHistoryDropdown = lazy(() => import('./components/SearchHistoryDropdown').then(m => ({ default: m.SearchHistoryDropdown })));
 const ColorFilterDropdown = lazy(() => import('./components/ColorFilterDropdown').then(m => ({ default: m.ColorFilterDropdown })));
 import { AppService, AppWithDetails } from './services/appService';
 
-// Utility function to copy image as PNG
-const copyImageAsPng = async (imgOrSrc: HTMLImageElement | string): Promise<'copied' | 'downloaded'> => {
-  try {
-    const img = typeof imgOrSrc === 'string' ? new Image() : imgOrSrc;
-    
-    if (typeof imgOrSrc === 'string') {
-      img.crossOrigin = 'anonymous';
-      img.src = imgOrSrc;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-    }
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas context not available');
-
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
-
-    const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else throw new Error('Failed to create blob');
-      }, 'image/png');
-    });
-
-    // Try to copy to clipboard
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob })
-        ]);
-        return 'copied';
-      } catch (clipboardError) {
-        console.warn('Clipboard API failed, falling back to download:', clipboardError);
-      }
-    }
-
-    // Fallback to download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'app-logo.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    return 'downloaded';
-  } catch (error) {
-    console.error('Error copying image:', error);
-    throw error;
-  }
+const ensureCorsParam = (url: string | undefined | null): string => {
+  if (!url) return '';
+  if (url.includes('cors=1')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}cors=1`;
 };
 
 // Draw a rounded rectangle path on canvas
@@ -95,58 +43,6 @@ const getBorderRadiusRatio = (el: HTMLElement): number => {
   }
   const px = parseFloat(first) || 0;
   return Math.max(0, Math.min(1, px / base));
-};
-
-// Copy a single image preserving its border-radius
-  const copySingleImageWithRadius = async (imgEl: HTMLImageElement): Promise<'copied' | 'downloaded'> => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas context not available');
-
-  if (!imgEl.complete || imgEl.naturalWidth === 0) {
-    await new Promise((resolve, reject) => {
-      imgEl.onload = resolve as any;
-      imgEl.onerror = reject as any;
-    });
-  }
-
-  canvas.width = imgEl.naturalWidth;
-  canvas.height = imgEl.naturalHeight;
-  const ratio = getBorderRadiusRatio(imgEl);
-  const radius = ratio * Math.min(canvas.width, canvas.height);
-
-  addRoundedRectPath(ctx, 0, 0, canvas.width, canvas.height, radius);
-  ctx.clip();
-  ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
-
-  const blob: Blob = await new Promise((resolve, reject) => {
-    try {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
-    } catch (err) {
-      reject(err);
-    }
-  });
-
-  if (navigator.clipboard && (window as any).ClipboardItem) {
-    try {
-      await navigator.clipboard.write([
-        new (window as any).ClipboardItem({ 'image/png': blob })
-      ]);
-      return 'copied';
-    } catch (err) {
-      console.warn('Clipboard API failed, falling back to download:', err);
-    }
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'app-logo.png';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  return 'downloaded';
 };
 
 // Create a combined canvas from multiple images, preserving aspect ratio and border-radius
@@ -210,6 +106,56 @@ const generateCombinedCanvas = async (
   return canvas;
 };
 
+const generateHorizontalStripCanvas = async (
+  images: HTMLImageElement[],
+  options?: { targetHeight?: number; gap?: number; padding?: number; cornerRadius?: number }
+): Promise<HTMLCanvasElement> => {
+  const ready = await Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve(img);
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = reject as any;
+      });
+    })
+  );
+
+  if (ready.length === 0) throw new Error('No images provided');
+
+  const targetHeight = options?.targetHeight ?? 2048;
+  const gap = options?.gap ?? Math.round(targetHeight * 0.045);
+  const padding = options?.padding ?? Math.round(targetHeight * 0.05);
+  const cornerRadius = options?.cornerRadius ?? Math.round(targetHeight * 0.07);
+
+  const widths = ready.map((img) => {
+    const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
+    return Math.max(1, Math.round(aspect * targetHeight));
+  });
+
+  const totalWidth = widths.reduce((sum, w) => sum + w, 0) + gap * Math.max(0, ready.length - 1) + padding * 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = totalWidth;
+  canvas.height = targetHeight + padding * 2;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas context not available');
+
+  let x = padding;
+  for (let i = 0; i < ready.length; i++) {
+    const img = ready[i];
+    const drawWidth = widths[i];
+    ctx.save();
+    const radius = Math.min(cornerRadius, Math.min(drawWidth, targetHeight) / 2);
+    addRoundedRectPath(ctx, x, padding, drawWidth, targetHeight, radius);
+    ctx.clip();
+    ctx.drawImage(img, x, padding, drawWidth, targetHeight);
+    ctx.restore();
+    x += drawWidth + gap;
+  }
+
+  return canvas;
+};
+
 // Color categories for filtering
 const COLORS = [
   { id: 'all', name: 'Color', value: 'all' },
@@ -236,14 +182,18 @@ function App() {
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [isColorFilterOpen, setIsColorFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [copyStatus, setCopyStatus] = useState<{ [key: string]: string }>({});
   const imgRefs = useRef<Map<string, HTMLImageElement>>(new Map());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCopyingScreenshots, setIsCopyingScreenshots] = useState(false);
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
+  const [activeApp, setActiveApp] = useState<AppWithDetails | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
   const [colorsById, setColorsById] = useState<{ [key: string]: string }>({});
+  const screenshotStripRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const handleImageLoad = useCallback((id: string) => {
     setImageLoaded(prev => ({ ...prev, [id]: true }));
@@ -370,6 +320,57 @@ function App() {
 
   const displayedApps: AppWithDetails[] = filteredApps;
 
+  const activeScreenshotUrls = useMemo(() => {
+    if (!activeApp) return [];
+    const unique = new Set<string>();
+    const push = (list?: string[]) => {
+      list?.forEach(url => {
+        if (url) unique.add(url);
+      });
+    };
+    push(activeApp.screenshotUrls);
+    push(activeApp.ipadScreenshotUrls);
+    push(activeApp.appletvScreenshotUrls);
+    return Array.from(unique)
+      .map(ensureCorsParam)
+      .filter((url): url is string => !!url);
+  }, [activeApp]);
+
+  const updateScreenshotScrollState = useCallback(() => {
+    const el = screenshotStripRef.current;
+    if (!el) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
+    const maxScrollLeft = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(maxScrollLeft - el.scrollLeft > 2);
+  }, []);
+
+  useEffect(() => {
+    const el = screenshotStripRef.current;
+    if (!el) return;
+    updateScreenshotScrollState();
+    const handleScroll = () => updateScreenshotScrollState();
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    const handleResize = () => updateScreenshotScrollState();
+    window.addEventListener('resize', handleResize);
+    const raf = requestAnimationFrame(updateScreenshotScrollState);
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(raf);
+    };
+  }, [activeScreenshotUrls, updateScreenshotScrollState]);
+
+  useEffect(() => {
+    if (!activeApp) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+    }
+  }, [activeApp]);
+
   // Flat list rendering; categories removed
 
   // Compute dominant colors on demand (only when a color filter is active)
@@ -450,8 +451,8 @@ function App() {
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
       const isTyping = activeTag === 'input' || activeTag === 'textarea';
       if (e.key === 'Escape') {
-        setCopyStatus({});
         setSelectedIds([]);
+        setActiveApp(null);
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !isTyping) {
         e.preventDefault();
@@ -483,6 +484,32 @@ function App() {
     run();
   }, [selectedIds]);
 
+
+  useEffect(() => {
+    setIsCopyingScreenshots(false);
+    if (!activeApp) {
+      document.body.style.overflow = '';
+      return;
+    }
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [activeApp]);
+
+  const openScreenshots = (app: AppWithDetails) => {
+    if (
+      !(app.screenshotUrls && app.screenshotUrls.length) &&
+      !(app.ipadScreenshotUrls && app.ipadScreenshotUrls.length) &&
+      !(app.appletvScreenshotUrls && app.appletvScreenshotUrls.length)
+    ) {
+      return;
+    }
+    setActiveApp(app);
+  };
+
+  const closeScreenshots = () => setActiveApp(null);
 
   const searchApps = async (term?: string) => {
     const searchValue = term || searchTerm;
@@ -548,41 +575,80 @@ function App() {
     }
   };
 
-  const handleCopyLogo = async (appId: string, imageSrc?: string) => {
-    try {
-      // Prefer element to preserve border radius; fallback to URL helper if not found
-      const el = imgRefs.current.get(appId);
-      const result = el ? await copySingleImageWithRadius(el) : await copyImageAsPng(imageSrc || '');
-      const message = result === 'copied' ? 'Copied!' : 'Downloaded!';
-      setCopyStatus(prev => ({ ...prev, [appId]: message }));
-      
-      // Clear status after 1.2 seconds
-      setTimeout(() => {
-        setCopyStatus(prev => {
-          const newStatus = { ...prev };
-          delete newStatus[appId];
-          return newStatus;
-        });
-      }, 1200);
-    } catch (error) {
-      console.error('Error copying logo:', error);
-      setCopyStatus(prev => ({ ...prev, [appId]: 'Failed to copy' }));
-      
-      setTimeout(() => {
-        setCopyStatus(prev => {
-          const newStatus = { ...prev };
-          delete newStatus[appId];
-          return newStatus;
-        });
-      }, 1200);
-    }
-  };
-
   const toggleSelect = (appId: string) => {
     setSelectedIds(prev => prev.includes(appId) ? prev.filter(id => id !== appId) : [...prev, appId]);
   };
 
   const clearSelection = () => setSelectedIds([]);
+
+  const copyActiveScreenshots = useCallback(async () => {
+    if (!activeApp || activeScreenshotUrls.length === 0) {
+      setGlobalMessage('No screenshots available');
+      setTimeout(() => setGlobalMessage(null), 1500);
+      return;
+    }
+    try {
+      setIsCopyingScreenshots(true);
+      setGlobalMessage('Copying screenshots...');
+      const images = await Promise.all(
+        activeScreenshotUrls.map((url) => new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = (err) => reject(err);
+          img.src = url;
+        }))
+      );
+      const canvas = await generateHorizontalStripCanvas(images, { targetHeight: 2400, gap: 120, padding: 160 });
+      const blob: Blob = await new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
+        } catch (err) {
+          reject(err);
+        }
+      });
+      const downloadName = `screenshots-${activeApp.trackId}.png`;
+      const triggerDownload = () => {
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = downloadName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      };
+      if (navigator.clipboard && (window as any).ClipboardItem) {
+        try {
+          await navigator.clipboard.write([
+            new (window as any).ClipboardItem({ 'image/png': blob })
+          ]);
+          setGlobalMessage('Copied screenshots to clipboard');
+        } catch (err) {
+          console.warn('Clipboard API failed, falling back to download:', err);
+          triggerDownload();
+          setGlobalMessage('Downloaded screenshots image');
+        }
+      } else {
+        triggerDownload();
+        setGlobalMessage('Downloaded screenshots image');
+      }
+      setTimeout(() => setGlobalMessage(null), 1500);
+    } catch (error) {
+      console.error('Failed to copy screenshots', error);
+      setGlobalMessage('Failed to copy screenshots');
+      setTimeout(() => setGlobalMessage(null), 1500);
+    } finally {
+      setIsCopyingScreenshots(false);
+    }
+  }, [activeApp, activeScreenshotUrls]);
+
+  const scrollScreenshots = useCallback((direction: 'left' | 'right') => {
+    const el = screenshotStripRef.current;
+    if (!el) return;
+    const delta = direction === 'left' ? -el.clientWidth * 0.9 : el.clientWidth * 0.9;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  }, []);
 
   const copySelected = async () => {
     if (selectedIds.length === 0) return;
@@ -774,7 +840,19 @@ function App() {
                         className="app-link"
                         style={{ '--app-color': (colorsById[app.trackId.toString()] || app.dominantColor || '#666666') } as React.CSSProperties}
                       >
-                        <div className="app-logo-container" title={app.trackName}>
+                        <div
+                          className="app-logo-container"
+                          title={app.trackName}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => openScreenshots(app)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              openScreenshots(app);
+                            }
+                          }}
+                        >
                           {(() => {
                             const largeRaw = app.artworkUrl100.replace('100x100', '512x512');
                             const smallRaw = app.artworkUrl100; // 100x100
@@ -817,20 +895,6 @@ function App() {
                               <polyline points="20 6 9 17 4 12" />
                             </svg>
                           </button>
-                          <button
-                            className="copy-button"
-                            onClick={() => handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleCopyLogo(app.trackId.toString(), app.artworkUrl100.replace('100x100', '512x512'));
-                              }
-                            }}
-                            aria-label="Copy logo"
-                            aria-live="polite"
-                          >
-                            {copyStatus[app.trackId.toString()] || 'Copy'}
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -861,6 +925,108 @@ function App() {
 
       {globalMessage && (
         <div className="toast" aria-live="polite">{globalMessage}</div>
+      )}
+
+      {activeApp && (
+        <div
+          className="screenshot-modal-overlay"
+          role="presentation"
+          onClick={closeScreenshots}
+        >
+          <div
+            className="screenshot-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${activeApp.trackName} App Store screenshots`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="screenshot-modal-header">
+              <div className="screenshot-modal-title">
+                <h2>{activeApp.trackName}</h2>
+              </div>
+              <div className="screenshot-modal-actions">
+                {activeApp.trackViewUrl && (
+                  <a
+                    href={activeApp.trackViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="screenshot-modal-link"
+                  >
+                    View in App Store
+                  </a>
+                )}
+                {activeScreenshotUrls.length > 0 && (
+                  <button
+                    type="button"
+                    className="screenshot-modal-copy"
+                    onClick={copyActiveScreenshots}
+                    disabled={isCopyingScreenshots}
+                    aria-label="Copy all screenshots"
+                  >
+                    {isCopyingScreenshots ? 'Preparing…' : 'Copy screenshots'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="screenshot-modal-close"
+                  onClick={closeScreenshots}
+                  aria-label="Close screenshots"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            </div>
+            <div className="screenshot-modal-body">
+              {(() => {
+                const screenshots = activeScreenshotUrls;
+                if (screenshots.length === 0) {
+                  return <p className="screenshot-modal-empty">No screenshots available.</p>;
+                }
+                return (
+                  <div className="screenshot-scroll-container">
+                    {canScrollLeft && (
+                      <button
+                        type="button"
+                        className="screenshot-nav screenshot-nav--left"
+                        onClick={() => scrollScreenshots('left')}
+                        aria-label="Scroll screenshots left"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                      </button>
+                    )}
+                    <div className="screenshot-strip" role="list" ref={screenshotStripRef}>
+                      {screenshots.map((url, index) => (
+                        <div className="screenshot-item" key={url} role="listitem">
+                          <img
+                            src={url}
+                            alt={`${activeApp.trackName} screenshot ${index + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {canScrollRight && (
+                      <button
+                        type="button"
+                        className="screenshot-nav screenshot-nav--right"
+                        onClick={() => scrollScreenshots('right')}
+                        aria-label="Scroll screenshots right"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 6 15 12 9 18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
       <footer>
