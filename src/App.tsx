@@ -55,7 +55,7 @@ const generateCombinedCanvas = async (
       if (img.complete && img.naturalWidth > 0) return Promise.resolve(img);
       return new Promise<HTMLImageElement>((resolve, reject) => {
         img.onload = () => resolve(img);
-        img.onerror = reject as any;
+        img.onerror = () => reject(new Error('Failed to load image'));
       });
     })
   );
@@ -115,7 +115,7 @@ const generateHorizontalStripCanvas = async (
       if (img.complete && img.naturalWidth > 0) return Promise.resolve(img);
       return new Promise<HTMLImageElement>((resolve, reject) => {
         img.onload = () => resolve(img);
-        img.onerror = reject as any;
+        img.onerror = () => reject(new Error('Failed to load image'));
       });
     })
   );
@@ -123,9 +123,9 @@ const generateHorizontalStripCanvas = async (
   if (ready.length === 0) throw new Error('No images provided');
 
   const targetHeight = options?.targetHeight ?? 2048;
-  const gap = options?.gap ?? Math.round(targetHeight * 0.045);
-  const padding = options?.padding ?? Math.round(targetHeight * 0.05);
-  const cornerRadius = options?.cornerRadius ?? Math.round(targetHeight * 0.07);
+  const gap = options?.gap ?? Math.round(targetHeight * 0.035);
+  const padding = options?.padding ?? Math.round(targetHeight * 0.04);
+  const cornerRadius = options?.cornerRadius ?? Math.round(targetHeight * 0.06);
 
   const widths = ready.map((img) => {
     const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
@@ -264,9 +264,9 @@ function App() {
   function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
     const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!res) return null;
-    let r = parseInt(res[1], 16) / 255;
-    let g = parseInt(res[2], 16) / 255;
-    let b = parseInt(res[3], 16) / 255;
+    const r = parseInt(res[1], 16) / 255;
+    const g = parseInt(res[2], 16) / 255;
+    const b = parseInt(res[3], 16) / 255;
 
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h = 0, s = 0;
@@ -348,19 +348,24 @@ function App() {
     setCanScrollRight(maxScrollLeft - el.scrollLeft > 2);
   }, []);
 
+  const handleScreenshotLoad = useCallback(() => {
+    updateScreenshotScrollState();
+  }, [updateScreenshotScrollState]);
+
   useEffect(() => {
     const el = screenshotStripRef.current;
     if (!el) return;
+    el.scrollTo({ left: 0 });
     updateScreenshotScrollState();
     const handleScroll = () => updateScreenshotScrollState();
     el.addEventListener('scroll', handleScroll, { passive: true });
     const handleResize = () => updateScreenshotScrollState();
     window.addEventListener('resize', handleResize);
-    const raf = requestAnimationFrame(updateScreenshotScrollState);
+    const rafId = requestAnimationFrame(updateScreenshotScrollState);
     return () => {
       el.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafId);
     };
   }, [activeScreenshotUrls, updateScreenshotScrollState]);
 
@@ -439,7 +444,8 @@ function App() {
     };
     // Defer to idle time to avoid competing with initial rendering
     if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(run, { timeout: 1200 });
+      (window as Window & { requestIdleCallback: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number })
+        .requestIdleCallback(run, { timeout: 1200 });
     } else {
       setTimeout(run, 0);
     }
@@ -599,7 +605,7 @@ function App() {
           img.src = url;
         }))
       );
-      const canvas = await generateHorizontalStripCanvas(images, { targetHeight: 2400, gap: 120, padding: 160 });
+      const canvas = await generateHorizontalStripCanvas(images, { targetHeight: 2400 });
       const blob: Blob = await new Promise((resolve, reject) => {
         try {
           canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
@@ -618,11 +624,10 @@ function App() {
         document.body.removeChild(a);
         URL.revokeObjectURL(downloadUrl);
       };
-      if (navigator.clipboard && (window as any).ClipboardItem) {
+      if (navigator.clipboard && 'ClipboardItem' in window) {
         try {
-          await navigator.clipboard.write([
-            new (window as any).ClipboardItem({ 'image/png': blob })
-          ]);
+          const clipboardItem = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([clipboardItem]);
           setGlobalMessage('Copied screenshots to clipboard');
         } catch (err) {
           console.warn('Clipboard API failed, falling back to download:', err);
@@ -666,11 +671,10 @@ function App() {
           reject(err);
         }
       });
-      if (navigator.clipboard && (window as any).ClipboardItem) {
+      if (navigator.clipboard && 'ClipboardItem' in window) {
         try {
-          await navigator.clipboard.write([
-            new (window as any).ClipboardItem({ 'image/png': blob })
-          ]);
+          const clipboardItem = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([clipboardItem]);
           setGlobalMessage('Copied combined image to clipboard');
         } catch (err) {
           console.warn('Clipboard API failed, falling back to download:', err);
@@ -944,37 +948,14 @@ function App() {
               <div className="screenshot-modal-title">
                 <h2>{activeApp.trackName}</h2>
               </div>
-              <div className="screenshot-modal-actions">
-                {activeApp.trackViewUrl && (
-                  <a
-                    href={activeApp.trackViewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="screenshot-modal-link"
-                  >
-                    View in App Store
-                  </a>
-                )}
-                {activeScreenshotUrls.length > 0 && (
-                  <button
-                    type="button"
-                    className="screenshot-modal-copy"
-                    onClick={copyActiveScreenshots}
-                    disabled={isCopyingScreenshots}
-                    aria-label="Copy all screenshots"
-                  >
-                    {isCopyingScreenshots ? 'Preparing…' : 'Copy screenshots'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="screenshot-modal-close"
-                  onClick={closeScreenshots}
-                  aria-label="Close screenshots"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                className="screenshot-modal-close"
+                onClick={closeScreenshots}
+                aria-label="Close screenshots"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
             <div className="screenshot-modal-body">
               {(() => {
@@ -1005,6 +986,7 @@ function App() {
                             loading="lazy"
                             decoding="async"
                             crossOrigin="anonymous"
+                            onLoad={handleScreenshotLoad}
                           />
                         </div>
                       ))}
@@ -1025,6 +1007,31 @@ function App() {
                 );
               })()}
             </div>
+            {(activeApp.trackViewUrl || activeScreenshotUrls.length > 0) && (
+              <div className="screenshot-modal-footer">
+                {activeApp.trackViewUrl && (
+                  <a
+                    href={activeApp.trackViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="screenshot-modal-link"
+                  >
+                    View in App Store
+                  </a>
+                )}
+                {activeScreenshotUrls.length > 0 && (
+                  <button
+                    type="button"
+                    className="screenshot-modal-copy"
+                    onClick={copyActiveScreenshots}
+                    disabled={isCopyingScreenshots}
+                    aria-label="Copy all screenshots"
+                  >
+                    {isCopyingScreenshots ? 'Preparing...' : 'Copy screenshots'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
