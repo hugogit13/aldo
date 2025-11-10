@@ -7,6 +7,9 @@ export interface AppWithDetails extends AppData {
   primaryGenreName: string
   genres: string[]
   trackViewUrl: string
+  screenshotUrls?: string[]
+  ipadScreenshotUrls?: string[]
+  appletvScreenshotUrls?: string[]
   dominantColor?: string
 }
 
