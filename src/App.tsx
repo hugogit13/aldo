@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } fro
 import './index.css';
 // Lazy-load non-critical dropdown
 const SearchHistoryDropdown = lazy(() => import('./components/SearchHistoryDropdown').then(m => ({ default: m.SearchHistoryDropdown })));
-const ColorFilterDropdown = lazy(() => import('./components/ColorFilterDropdown').then(m => ({ default: m.ColorFilterDropdown })));
 import { AppService, AppWithDetails } from './services/appService';
 
 const ensureCorsParam = (url: string | undefined | null): string => {
@@ -156,23 +155,9 @@ const generateHorizontalStripCanvas = async (
   return canvas;
 };
 
-// Color categories for filtering
-const COLORS = [
-  { id: 'all', name: 'Color', value: 'all' },
-  { id: 'red', name: 'Red', value: '#ff0000' },
-  { id: 'orange', name: 'Orange', value: '#ffa500' },
-  { id: 'yellow', name: 'Yellow', value: '#ffff00' },
-  { id: 'green', name: 'Green', value: '#00ff00' },
-  { id: 'blue', name: 'Blue', value: '#0000ff' },
-  { id: 'purple', name: 'Purple', value: '#800080' },
-  { id: 'pink', name: 'Pink', value: '#ff1493' },
-  { id: 'black', name: 'Black', value: '#000000' },
-  { id: 'white', name: 'White', value: '#ffffff' }
-];
 
 function App() {
   const [apps, setApps] = useState<AppWithDetails[]>([]);
-  const [selectedColor, setSelectedColor] = useState<string>('all');
   const [totalLogoCount, setTotalLogoCount] = useState<number>(0);
   const [selectedCategory, setSelectedCategory] = useState<'app' | 'game'>('app');
 
@@ -180,7 +165,6 @@ function App() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
-  const [isColorFilterOpen, setIsColorFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const imgRefs = useRef<Map<string, HTMLImageElement>>(new Map());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -190,7 +174,6 @@ function App() {
   const [activeApp, setActiveApp] = useState<AppWithDetails | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
-  const [colorsById, setColorsById] = useState<{ [key: string]: string }>({});
   const screenshotStripRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -259,63 +242,8 @@ function App() {
     loadAppsByCategory();
   }, [loadAppsByCategory]);
 
-  // Color distance helper and closest palette color
-  // Hue-based color matching for perceptual accuracy
-  function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
-    const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!res) return null;
-    const r = parseInt(res[1], 16) / 255;
-    const g = parseInt(res[2], 16) / 255;
-    const b = parseInt(res[3], 16) / 255;
-
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0;
-    const l = (max + min) / 2;
-    const d = max - min;
-    if (d !== 0) {
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h *= 60;
-    }
-    return { h, s, l };
-  }
-
-  function hueDistance(a: number, b: number): number {
-    const d = Math.abs(a - b) % 360;
-    return d > 180 ? 360 - d : d;
-  }
-
-  function getClosestColorId(color: string): string {
-    const hsl = hexToHsl(color);
-    if (!hsl) return 'black';
-
-    // Handle neutrals by lightness/saturation thresholds
-    if (hsl.s < 0.12) {
-      return hsl.l > 0.8 ? 'white' : 'black';
-    }
-
-    const paletteWithHues = COLORS.filter(c => c.id !== 'all' && c.id !== 'white' && c.id !== 'black')
-      .map(c => ({ id: c.id, h: hexToHsl(c.value)!.h }));
-    const closest = paletteWithHues
-      .map(p => ({ id: p.id, dist: hueDistance(hsl.h, p.h) }))
-      .sort((a, b) => a.dist - b.dist)[0];
-
-    // Edge-case: decide between black/white vs chroma if saturation very low
-    return closest?.id || 'black';
-  }
-
-  // Derived lists (filter, paginate)
+  // Derived lists
   const filteredApps: AppWithDetails[] = apps
-    .filter(app => {
-      if (selectedColor === 'all') return true;
-      const color = colorsById[app.trackId.toString()] || app.dominantColor || '#666666';
-      const closest = getClosestColorId(color);
-      return closest === selectedColor;
-    })
     .sort((a, b) => a.trackName.localeCompare(b.trackName));
 
   const displayedApps: AppWithDetails[] = filteredApps;
@@ -376,81 +304,6 @@ function App() {
     }
   }, [activeApp]);
 
-  // Flat list rendering; categories removed
-
-  // Compute dominant colors on demand (only when a color filter is active)
-  const computeDominantColorFromElement = useCallback(async (imgEl: HTMLImageElement): Promise<string> => {
-    if (!imgEl.complete || imgEl.naturalWidth === 0) {
-      await new Promise<void>((resolve, reject) => {
-        imgEl.onload = () => resolve();
-        imgEl.onerror = () => reject();
-      });
-    }
-    const sampleSize = 24;
-    const canvas = document.createElement('canvas');
-    canvas.width = sampleSize;
-    canvas.height = sampleSize;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '#666666';
-    try {
-      ctx.drawImage(imgEl, 0, 0, sampleSize, sampleSize);
-      const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize);
-      let r = 0, g = 0, b = 0, n = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-        n++;
-      }
-      r = Math.round(r / n);
-      g = Math.round(g / n);
-      b = Math.round(b / n);
-      const toHex = (x: number) => x.toString(16).padStart(2, '0');
-      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    } catch {
-      // Fallback if canvas is tainted
-      return '#666666';
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedColor === 'all' || apps.length === 0) return;
-    const missing = apps.filter(a => !colorsById[a.trackId.toString()]).slice(0, 80);
-    if (missing.length === 0) return;
-    let cancelled = false;
-    const run = async () => {
-      const updates: { [k: string]: string } = {};
-      for (const app of missing) {
-        const id = app.trackId.toString();
-        const el = imgRefs.current.get(id);
-        if (el) {
-          const color = await computeDominantColorFromElement(el).catch(() => '#666666');
-          if (cancelled) return;
-          updates[id] = color;
-        } else {
-          // As a fallback, compute using the 100x100 URL without blocking others
-          try {
-            const color = await AppService.getDominantColor(app.artworkUrl100);
-            if (cancelled) return;
-            updates[id] = color;
-          } catch {
-            // ignore
-          }
-        }
-      }
-      if (!cancelled && Object.keys(updates).length) {
-        setColorsById(prev => ({ ...prev, ...updates }));
-      }
-    };
-    // Defer to idle time to avoid competing with initial rendering
-    if ('requestIdleCallback' in window) {
-      (window as Window & { requestIdleCallback: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number })
-        .requestIdleCallback(run, { timeout: 1200 });
-    } else {
-      setTimeout(run, 0);
-    }
-    return () => { cancelled = true; };
-  }, [selectedColor, apps, colorsById, computeDominantColorFromElement]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -807,19 +660,7 @@ function App() {
       </div>
 
       <div className="container">
-        {/* Color filter dropdown */}
-        <div className="color-filter-wrapper">
-          <Suspense fallback={null}>
-            <ColorFilterDropdown
-              colors={COLORS}
-              selectedColor={selectedColor}
-              onSelect={(colorId) => setSelectedColor(colorId)}
-              isOpen={isColorFilterOpen}
-              setIsOpen={setIsColorFilterOpen}
-            />
-          </Suspense>
-        </div>
-        <>
+<>
           {isLoading || (apps.length === 0 && !hasSearched) ? (
             <div className="apps-container">
               {Array.from({ length: 30 }).map((_, i) => (
@@ -840,10 +681,7 @@ function App() {
                 <div className="apps-container">
                   {displayedApps.map(app => (
                     <div key={app.trackId} className={`app-card ${selectedIds.includes(app.trackId.toString()) ? 'is-selected' : ''}`} tabIndex={0}>
-                      <div 
-                        className="app-link"
-                        style={{ '--app-color': (colorsById[app.trackId.toString()] || app.dominantColor || '#666666') } as React.CSSProperties}
-                      >
+                      <div className="app-link">
                         <div
                           className="app-logo-container"
                           title={app.trackName}
