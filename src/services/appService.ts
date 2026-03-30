@@ -29,7 +29,6 @@ export interface AppWithDetails extends AppData {
   screenshotUrls?: string[]
   ipadScreenshotUrls?: string[]
   appletvScreenshotUrls?: string[]
-  dominantColor?: string
 }
 
 export class AppService {
@@ -176,54 +175,4 @@ export class AppService {
     }
   }
 
-  // Get dominant color from app icon
-  static async getDominantColor(imageUrl: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'Anonymous'
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'))
-          return
-        }
-
-        canvas.width = img.width
-        canvas.height = img.height
-        ctx.drawImage(img, 0, 0)
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const data = imageData.data
-        const colorCounts: { [key: string]: number } = {}
-
-        // Sample pixels to find dominant color
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i]
-          const g = data[i + 1]
-          const b = data[i + 2]
-          // Convert RGB to hex
-          const hex = '#' + [r, g, b].map(x => {
-            const hex = x.toString(16)
-            return hex.length === 1 ? '0' + hex : hex
-          }).join('')
-          colorCounts[hex] = (colorCounts[hex] || 0) + 1
-        }
-
-        // Find the most common color
-        let maxCount = 0
-        let dominantColor = '#666666' // Fallback color
-        for (const [color, count] of Object.entries(colorCounts)) {
-          if (count > maxCount) {
-            maxCount = count
-            dominantColor = color
-          }
-        }
-
-        resolve(dominantColor)
-      }
-      img.onerror = reject
-      img.src = imageUrl
-    })
-  }
 }
